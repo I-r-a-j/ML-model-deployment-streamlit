@@ -1,6 +1,7 @@
 # Import necessary libraries
 import streamlit as st
 from pycaret.time_series import load_model, predict_model
+import pandas as pd
 
 # Load the saved time series model (.pkl file)
 model_path = '/btc_simple_model.pkl'
