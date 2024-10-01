@@ -1,31 +1,41 @@
-# Import necessary libraries
 import streamlit as st
-from pycaret.time_series import load_model, predict_model
+import joblib
 import pandas as pd
+import numpy as np
 
-# Load the saved time series model (.pkl file)
-model_path = '/btc_simple_model.pkl'
+# Load the model
+model = joblib.load('btc_simple_model.pkl')
 
-# Define the Streamlit app
-def main():
-    st.title("Time Series Forecasting Web App")
+st.title('BTC Price Prediction App')
+
+# Determine the number of past values needed for prediction
+# You'll need to adjust this based on your specific model
+n_past_values = 5  # Example: using 5 past values to predict the next
+
+# Create input fields for past values
+past_values = []
+for i in range(n_past_values):
+    value = st.number_input(f'Enter BTC price {i+1} time step ago', value=0.0, step=0.01)
+    past_values.append(value)
+
+# Make prediction
+if st.button('Predict Next BTC Price'):
+    # Prepare input data
+    input_data = np.array(past_values).reshape(1, -1)
     
-    # Forecast horizon input
-    forecast_horizon = st.number_input('Enter forecast horizon (number of future periods to predict):', min_value=1, value=10)
+    # Make prediction
+    prediction = model.predict(input_data)
     
-    # Button to trigger prediction
-    if st.button("Make Prediction"):
-        # Load the model
-        model = load_model(model_path)
-        
-        # Make predictions
-        predictions = predict_model(model, fh=forecast_horizon)
-        
-        # Display the predictions
-        st.subheader("Predictions for the next {} time periods:".format(forecast_horizon))
-        st.write(predictions)
-        
-# Run the app
-if __name__ == "__main__":
-    main()
+    st.write(f'The predicted next BTC price is: ${prediction[0]:.2f}')
 
+# Optional: Add a section for plotting past values and prediction
+if st.checkbox('Show Plot'):
+    import matplotlib.pyplot as plt
+
+    fig, ax = plt.subplots()
+    ax.plot(range(n_past_values), past_values, label='Past Values')
+    ax.plot(n_past_values, prediction, 'ro', label='Prediction')
+    ax.set_xlabel('Time Steps')
+    ax.set_ylabel('BTC Price')
+    ax.legend()
+    st.pyplot(fig)
