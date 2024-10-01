@@ -1,3 +1,6 @@
 streamlit
-pycaret
+joblib
 pandas
+numpy
+matplotlib
+scikit-learn
