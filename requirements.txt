@@ -1,5 +1,5 @@
 streamlit
-datetime
+prophet
 yfinance
-fbprophe
 plotly
+
