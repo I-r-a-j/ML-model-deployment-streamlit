@@ -1,5 +1,6 @@
 streamlit
-prophet
+pandas
 yfinance
 plotly
-
+numpy
+sklearn
