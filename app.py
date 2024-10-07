@@ -75,21 +75,28 @@ predictions = model.predict(X_test)
 last_close = df_train['Close'].iloc[-1]
 future_dates = pd.date_range(df_train.index[-1], periods=period + 1, freq='D').tolist()
 
+# Initialize future_close with the same length as future_dates
 future_close = [last_close]
-for i in range(1, period):
-    next_close = model.predict([[future_close[-1]]])
+
+# Recursive prediction loop for future prices
+for i in range(1, len(future_dates)):
+    next_close = model.predict([[future_close[-1]]])  # Predict the next day's close based on previous prediction
     future_close.append(next_close[0])
 
-future_df = pd.DataFrame({'Date': future_dates, 'Predicted Close': future_close})
-future_df.set_index('Date', inplace=True)
+# Ensure future_dates and future_close have the same length
+if len(future_dates) == len(future_close):
+    future_df = pd.DataFrame({'Date': future_dates, 'Predicted Close': future_close})
+    future_df.set_index('Date', inplace=True)
 
-# Show the forecast data
-st.subheader('Forecast data')
-st.write(future_df.tail())
+    # Show the forecast data
+    st.subheader('Forecast data')
+    st.write(future_df.tail())
 
-# Plot forecast data
-st.write(f'Forecast plot for {n_years} years')
-fig1 = go.Figure()
-fig1.add_trace(go.Scatter(x=future_df.index, y=future_df['Predicted Close'], name='Predicted Close'))
-fig1.layout.update(title_text='Forecasted Stock Prices', xaxis_rangeslider_visible=True)
-st.plotly_chart(fig1)
+    # Plot forecast data
+    st.write(f'Forecast plot for {n_years} years')
+    fig1 = go.Figure()
+    fig1.add_trace(go.Scatter(x=future_df.index, y=future_df['Predicted Close'], name='Predicted Close'))
+    fig1.layout.update(title_text='Forecasted Stock Prices', xaxis_rangeslider_visible=True)
+    st.plotly_chart(fig1)
+else:
+    st.error("Error: Future dates and predicted close values have mismatched lengths.")
