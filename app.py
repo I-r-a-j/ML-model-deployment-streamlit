@@ -1,30 +1,65 @@
+# pip install streamlit fbprophet yfinance plotly
 import streamlit as st
-import joblib
-import numpy as np
+from datetime import date
 
-# Load the model
-model = joblib.load('btc_simple_model.pkl')
+import yfinance as yf
+from fbprophet import Prophet
+from fbprophet.plot import plot_plotly
+from plotly import graph_objs as go
 
-st.title('BTC Price Prediction App')
+START = "2015-01-01"
+TODAY = date.today().strftime("%Y-%m-%d")
 
-# Assuming this is a time series model, let's create inputs for past values
-# Adjust the number of past values based on your model's requirements
-n_past_values = 5  # Example: using 5 past values to predict the next
+st.title('Stock Forecast App')
 
-past_values = []
-for i in range(n_past_values):
-    value = st.number_input(f'BTC price {i+1} time steps ago', value=0.0, step=0.01)
-    past_values.append(value)
+stocks = ('GOOG', 'AAPL', 'MSFT', 'GME')
+selected_stock = st.selectbox('Select dataset for prediction', stocks)
 
-# Make prediction
-if st.button('Predict Next BTC Price'):
-    # Prepare input data
-    input_data = np.array(past_values).reshape(1, -1)
+n_years = st.slider('Years of prediction:', 1, 4)
+period = n_years * 365
+
+
+@st.cache
+def load_data(ticker):
+    data = yf.download(ticker, START, TODAY)
+    data.reset_index(inplace=True)
+    return data
+
+	
+data_load_state = st.text('Loading data...')
+data = load_data(selected_stock)
+data_load_state.text('Loading data... done!')
+
+st.subheader('Raw data')
+st.write(data.tail())
+
+# Plot raw data
+def plot_raw_data():
+	fig = go.Figure()
+	fig.add_trace(go.Scatter(x=data['Date'], y=data['Open'], name="stock_open"))
+	fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], name="stock_close"))
+	fig.layout.update(title_text='Time Series data with Rangeslider', xaxis_rangeslider_visible=True)
+	st.plotly_chart(fig)
+	
+plot_raw_data()
+
+# Predict forecast with Prophet.
+df_train = data[['Date','Close']]
+df_train = df_train.rename(columns={"Date": "ds", "Close": "y"})
+
+m = Prophet()
+m.fit(df_train)
+future = m.make_future_dataframe(periods=period)
+forecast = m.predict(future)
+
+# Show and plot forecast
+st.subheader('Forecast data')
+st.write(forecast.tail())
     
-    # Make prediction
-    try:
-        prediction = model.predict(input_data)
-        st.success(f'The predicted next BTC price is: ${prediction[0]:.2f}')
-    except Exception as e:
-        st.error(f"An error occurred: {str(e)}")
-        st.write("If this error persists, the model might need to be loaded differently. Please check the model structure and input requirements.")
+st.write(f'Forecast plot for {n_years} years')
+fig1 = plot_plotly(m, forecast)
+st.plotly_chart(fig1)
+
+st.write("Forecast components")
+fig2 = m.plot_components(forecast)
+st.write(fig2)
