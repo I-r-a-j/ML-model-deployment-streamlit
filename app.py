@@ -54,6 +54,9 @@ df_train['year'] = df_train['ds'].dt.year
 # Drop rows with NaN values
 df_train = df_train.dropna()
 
+# Ensure feature order matches the training data
+features_order = ['SMA_10', 'SMA_30', 'EMA_10', 'EMA_30', 'day', 'month', 'year']
+
 # Streamlit UI
 st.title("Bitcoin Price Prediction (Next 5 Days)")
 
@@ -74,6 +77,9 @@ future_features = pd.DataFrame({
     'EMA_10': df_train['EMA_10'].iloc[-1],  # Last known EMA_10 value
     'EMA_30': df_train['EMA_30'].iloc[-1]   # Last known EMA_30 value
 })
+
+# Ensure future features match the training feature order
+future_features = future_features[features_order]
 
 # Predict future prices using the pre-trained model
 future_close = model.predict(future_features)
