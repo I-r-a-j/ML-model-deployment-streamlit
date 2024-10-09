@@ -3,6 +3,7 @@ import pickle
 import streamlit as st
 import pandas as pd
 from datetime import date
+import yfinance as yf  # Import yfinance for downloading stock/crypto data
 
 # Google Drive link for the model
 MODEL_URL = "https://drive.google.com/uc?export=download&id=1WXr4WWLJXIwJvOmeSVEINgEI2_IszJw0"
