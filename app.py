@@ -65,17 +65,23 @@ st.subheader("Raw Data")
 st.write(data.tail())
 
 # Prepare future features for prediction
-last_row = df_train.tail(1)
-future_dates = pd.date_range(df_train['ds'].iloc[-1], periods=period + 1, freq='D').tolist()
+today = pd.Timestamp(TODAY)
 
+# Generate future dates starting from today (current date)
+future_dates = pd.date_range(today, periods=period, freq='D').tolist()
+
+# Use the most recent feature data for predictions (from the last row of df_train)
+last_row = df_train.tail(1)
+
+# Generate new feature data for future dates (moving averages and date features)
 future_features = pd.DataFrame({
     'day': [d.day for d in future_dates],
     'month': [d.month for d in future_dates],
     'year': [d.year for d in future_dates],
-    'SMA_10': df_train['SMA_10'].iloc[-1],  # Last known SMA_10 value
-    'SMA_30': df_train['SMA_30'].iloc[-1],  # Last known SMA_30 value
-    'EMA_10': df_train['EMA_10'].iloc[-1],  # Last known EMA_10 value
-    'EMA_30': df_train['EMA_30'].iloc[-1]   # Last known EMA_30 value
+    'SMA_10': last_row['SMA_10'].values[0],  # Last known SMA_10 value
+    'SMA_30': last_row['SMA_30'].values[0],  # Last known SMA_30 value
+    'EMA_10': last_row['EMA_10'].values[0],  # Last known EMA_10 value
+    'EMA_30': last_row['EMA_30'].values[0]   # Last known EMA_30 value
 })
 
 # Ensure future features match the training feature order
@@ -92,3 +98,6 @@ future_df.set_index('Date', inplace=True)
 st.subheader(f"Predicted Bitcoin Prices for the Next {period} Days")
 st.write(future_df)
 
+# Plot the predictions
+st.subheader("Prediction Plot")
+st.line_chart(future_df['Predicted Close'])
