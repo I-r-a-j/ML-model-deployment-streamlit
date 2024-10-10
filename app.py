@@ -6,7 +6,8 @@ from datetime import date, timedelta
 import yfinance as yf
 
 # Google Drive link for the model
-MODEL_URL = "https://drive.google.com/uc?export=download&id=1WXr4WWLJXIwJvOmeSVEINgEI2_IszJw0"
+MODEL_URL = "https://drive.google.com/uc?export=download&id=1kTRfX5_r2cFDWiJwCUNtREavZgLP18dA"
+
 
 # Function to download the model from Google Drive
 @st.cache_resource
