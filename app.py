@@ -2,14 +2,14 @@ import requests
 import pickle
 import streamlit as st
 import pandas as pd
-from datetime import date
-import yfinance as yf  # Import yfinance for downloading stock/crypto data
+from datetime import date, timedelta
+import yfinance as yf
 
 # Google Drive link for the model
 MODEL_URL = "https://drive.google.com/uc?export=download&id=1WXr4WWLJXIwJvOmeSVEINgEI2_IszJw0"
 
 # Function to download the model from Google Drive
-@st.cache_resource  # Cache the model to avoid re-downloading
+@st.cache_resource
 def load_model(url):
     response = requests.get(url)
     with open("bitcoin_rf_model_with_moving_avg.pkl", "wb") as file:
@@ -64,7 +64,32 @@ st.title("Bitcoin Price Prediction (Next 5 Days)")
 st.subheader("Raw Data")
 st.write(data.tail())
 
-# Prepare future features for prediction
+# Step 1: Check if there's a gap between the last available date and today
+last_available_date = df_train['ds'].max()
+
+# Step 2: Fill missing dates between the last available date and today
+if last_available_date < pd.Timestamp(TODAY):
+    # Create a date range between the last available date and today
+    missing_dates = pd.date_range(last_available_date + timedelta(days=1), pd.Timestamp(TODAY), freq='D')
+
+    # Fill missing dates using the last known values for the moving averages
+    last_row = df_train.tail(1)
+    missing_data = pd.DataFrame({
+        'ds': missing_dates,
+        'y': last_row['y'].values[0],  # Use last known price as a placeholder
+        'SMA_10': last_row['SMA_10'].values[0],
+        'SMA_30': last_row['SMA_30'].values[0],
+        'EMA_10': last_row['EMA_10'].values[0],
+        'EMA_30': last_row['EMA_30'].values[0],
+        'day': [d.day for d in missing_dates],
+        'month': [d.month for d in missing_dates],
+        'year': [d.year for d in missing_dates]
+    })
+
+    # Append the missing data to the existing dataframe
+    df_train = pd.concat([df_train, missing_data])
+
+# Step 3: Prepare future features for prediction
 today = pd.Timestamp(TODAY)
 
 # Generate future dates starting from today (current date)
@@ -98,4 +123,6 @@ future_df.set_index('Date', inplace=True)
 st.subheader(f"Predicted Bitcoin Prices for the Next {period} Days")
 st.write(future_df)
 
-
+# Plot the predictions
+st.subheader("Prediction Plot")
+st.line_chart(future_df['Predicted Close'])
