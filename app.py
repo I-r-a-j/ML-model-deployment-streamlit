@@ -98,6 +98,4 @@ future_df.set_index('Date', inplace=True)
 st.subheader(f"Predicted Bitcoin Prices for the Next {period} Days")
 st.write(future_df)
 
-# Plot the predictions
-st.subheader("Prediction Plot")
-st.line_chart(future_df['Predicted Close'])
+
