@@ -1,108 +1,95 @@
-# Import necessary libraries
-from datetime import date, timedelta
+import streamlit as st
 import pandas as pd
 import yfinance as yf
-import pickle
-import numpy as np
+import joblib
+from datetime import datetime, timedelta
+import plotly.graph_objects as go
 
-# Set start date for data and today's date
-START = "2015-01-01"
-TODAY = date.today().strftime("%Y-%m-%d")
-TODAY_DATE = pd.to_datetime(TODAY)
+# Load the saved model
+@st.cache_resource
+def load_model():
+    return joblib.load('/bitcoin_price_model2.pkl')
 
-# Set Bitcoin symbol for predictions
-selected_stock = 'BTC-USD'  # Bitcoin
-
-# Fixed prediction period of 5 days
-period = 5
-
-# Function to load stock/crypto data from Yahoo Finance
-def load_data(ticker):
-    data = yf.download(ticker, START, TODAY)
-    data.reset_index(inplace=True)
+# Fetch the latest Bitcoin data
+@st.cache_data(ttl=3600)  # Cache for 1 hour
+def fetch_bitcoin_data():
+    btc = yf.Ticker("BTC-USD")
+    data = btc.history(period="60d")  # Fetch 60 days of data
     return data
 
-# Load Bitcoin data up to today's date
-data = load_data(selected_stock)
+# Prepare features for prediction
+def prepare_features(data):
+    features = data[['Open', 'High', 'Low', 'Volume']].copy()
+    features['SMA_7'] = data['Close'].rolling(window=7).mean()
+    features['SMA_30'] = data['Close'].rolling(window=30).mean()
+    features['EMA_7'] = data['Close'].ewm(span=7, adjust=False).mean()
+    features['EMA_30'] = data['Close'].ewm(span=30, adjust=False).mean()
+    features['Day'] = data.index.day
+    features['Month'] = data.index.month
+    features['Year'] = data.index.year
+    return features
 
-# Display raw data (for debugging)
-print("Raw data:")
-print(data.tail())
+# Make predictions for the next 5 days
+def predict_next_5_days(model, scaler, last_known_values):
+    next_5_days = [datetime.now().date() + timedelta(days=i) for i in range(1, 6)]
+    next_5_days_features = pd.DataFrame(index=next_5_days, columns=['Open', 'High', 'Low', 'Volume', 'SMA_7', 'SMA_30', 'EMA_7', 'EMA_30', 'Day', 'Month', 'Year'])
 
-# Load the pre-trained model
-model_filename = 'BTC_rf_model_with_moving_avg.pkl'
-with open(model_filename, 'rb') as file:
-    best_rf = pickle.load(file)
+    for date in next_5_days:
+        next_5_days_features.loc[date, 'Day'] = date.day
+        next_5_days_features.loc[date, 'Month'] = date.month
+        next_5_days_features.loc[date, 'Year'] = date.year
 
-# Prepare the data for predictions (using 'Date' and 'Close' columns)
-df_train = data[['Date', 'Close']]
-df_train = df_train.rename(columns={"Date": "ds", "Close": "y"})
+    for col in next_5_days_features.columns:
+        if col not in ['Day', 'Month', 'Year']:
+            next_5_days_features[col] = last_known_values[col]
 
-# Feature Engineering: Adding more features (SMA, EMA, day, month, year)
-df_train['SMA_10'] = df_train['y'].rolling(window=10).mean()  # 10-day Simple Moving Average
-df_train['SMA_30'] = df_train['y'].rolling(window=30).mean()  # 30-day Simple Moving Average
-df_train['EMA_10'] = df_train['y'].ewm(span=10, adjust=False).mean()  # 10-day Exponential Moving Average
-df_train['EMA_30'] = df_train['y'].ewm(span=30, adjust=False).mean()  # 30-day Exponential Moving Average
+    next_5_days_scaled = scaler.transform(next_5_days_features)
+    predictions = model.predict(next_5_days_scaled)
 
-# Add date-based features
-df_train['day'] = df_train['ds'].dt.day
-df_train['month'] = df_train['ds'].dt.month
-df_train['year'] = df_train['ds'].dt.year
+    return pd.Series(predictions, index=next_5_days, name='Predicted Close')
 
-# Drop rows with NaN values from rolling means
-df_train = df_train.dropna()
+# Main Streamlit app
+def main():
+    st.title('Bitcoin Price Predictor')
 
-# Find the last available date in the data
-last_date = df_train['ds'].max()
+    # Load model and data
+    model_data = load_model()
+    bitcoin_data = fetch_bitcoin_data()
 
-# If the last date in the data is older than today, fill the gap with missing data
-if last_date < TODAY_DATE:
-    missing_days = pd.date_range(start=last_date + timedelta(days=1), end=TODAY_DATE)
-    
-    # Create a DataFrame to fill the gap with placeholder values (use last available values)
-    filler_df = pd.DataFrame({
-        'ds': missing_days,
-        'y': np.nan,  # Placeholder for actual 'Close' values
-        'SMA_10': df_train['SMA_10'].iloc[-1],  # Last known SMA_10 value
-        'SMA_30': df_train['SMA_30'].iloc[-1],  # Last known SMA_30 value
-        'EMA_10': df_train['EMA_10'].iloc[-1],  # Last known EMA_10 value
-        'EMA_30': df_train['EMA_30'].iloc[-1],  # Last known EMA_30 value
-        'day': missing_days.day,
-        'month': missing_days.month,
-        'year': missing_days.year
-    })
-    
-    # Append the missing data to the training data
-    df_train = pd.concat([df_train, filler_df], ignore_index=True)
+    # Display the last 10 days of Bitcoin data
+    st.subheader('Last 10 Days of Bitcoin Data')
+    st.dataframe(bitcoin_data.tail(10))
 
-# Extract the most recent data (including today) for future prediction
-last_row = df_train.tail(1)
+    # Prepare features and make predictions
+    features = prepare_features(bitcoin_data)
+    last_known_values = features.iloc[-1]
+    predictions = predict_next_5_days(model_data['model'], model_data['scaler'], last_known_values)
 
-# Predicting future data: Create future dataset (5 days ahead starting from today)
-future_dates = pd.date_range(TODAY_DATE, periods=period, freq='D').tolist()
+    # Display predictions
+    st.subheader(f'Predictions for the Next 5 Days (as of {datetime.now().strftime("%Y-%m-%d %H:%M:%S")})')
+    st.dataframe(predictions)
 
-# Generate new feature data for future dates (moving averages and date features)
-future_features = pd.DataFrame({
-    'day': [d.day for d in future_dates],
-    'month': [d.month for d in future_dates],
-    'year': [d.year for d in future_dates],
-    'SMA_10': last_row['SMA_10'].iloc[-1],  # Last known SMA_10 value
-    'SMA_30': last_row['SMA_30'].iloc[-1],  # Last known SMA_30 value
-    'EMA_10': last_row['EMA_10'].iloc[-1],  # Last known EMA_10 value
-    'EMA_30': last_row['EMA_30'].iloc[-1]   # Last known EMA_30 value
-})
+    # Create a line plot of historical prices and predictions
+    fig = go.Figure()
 
-# Ensure future features have the same column order as X_train
-X_train_columns = ['SMA_10', 'SMA_30', 'EMA_10', 'EMA_30', 'day', 'month', 'year']
-future_features = future_features[X_train_columns]
+    # Historical prices
+    fig.add_trace(go.Scatter(x=bitcoin_data.index, y=bitcoin_data['Close'],
+                             mode='lines',
+                             name='Historical Close Price'))
 
-# Predict future prices using the pre-trained Random Forest model
-future_close = best_rf.predict(future_features)
+    # Predictions
+    fig.add_trace(go.Scatter(x=predictions.index, y=predictions,
+                             mode='lines+markers',
+                             name='Predicted Close Price'))
 
-# Create a DataFrame for the predictions
-future_df = pd.DataFrame({'Date': future_dates, 'Predicted Close': future_close})
-future_df.set_index('Date', inplace=True)
+    fig.update_layout(title='Bitcoin Price: Historical and Predicted',
+                      xaxis_title='Date',
+                      yaxis_title='Price (USD)')
 
-# Show the forecast data (Next 5 days)
-print("Forecast data (Next 5 days):")
-print(future_df)
+    st.plotly_chart(fig)
+
+    # Display last update time
+    st.text(f'Last updated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
+
+if __name__ == "__main__":
+    main()
