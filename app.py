@@ -31,13 +31,12 @@ def prepare_features(data):
 
 # Make predictions for the next 5 days
 def predict_next_5_days(model, scaler, last_known_values):
-    next_5_days = [datetime.now().date() + timedelta(days=i) for i in range(1, 6)]
+    next_5_days = pd.date_range(start=datetime.now().date() + timedelta(days=1), periods=5)
     next_5_days_features = pd.DataFrame(index=next_5_days, columns=['Open', 'High', 'Low', 'Volume', 'SMA_7', 'SMA_30', 'EMA_7', 'EMA_30', 'Day', 'Month', 'Year'])
 
-    for date in next_5_days:
-        next_5_days_features.loc[date, 'Day'] = date.day
-        next_5_days_features.loc[date, 'Month'] = date.month
-        next_5_days_features.loc[date, 'Year'] = date.year
+    next_5_days_features['Day'] = next_5_days.day
+    next_5_days_features['Month'] = next_5_days.month
+    next_5_days_features['Year'] = next_5_days.year
 
     for col in next_5_days_features.columns:
         if col not in ['Day', 'Month', 'Year']:
