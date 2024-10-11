@@ -8,7 +8,7 @@ import plotly.graph_objects as go
 # Load the saved model
 @st.cache_resource
 def load_model():
-    return joblib.load('/bitcoin_price_model2.pkl')
+    return joblib.load('bitcoin_price_model2.pkl')
 
 # Fetch the latest Bitcoin data
 @st.cache_data(ttl=3600)  # Cache for 1 hour
