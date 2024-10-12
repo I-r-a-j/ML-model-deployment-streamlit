@@ -1,7 +1,5 @@
-streamlit
 pandas
 yfinance
 pickle
-plotly
 scikit-learn
 numpy
