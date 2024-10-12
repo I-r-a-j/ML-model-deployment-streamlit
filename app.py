@@ -26,8 +26,20 @@ model = load_model(MODEL_URL)
 # Constants
 START = "2015-01-01"
 TODAY = date.today().strftime("%Y-%m-%d")
-selected_stock = 'BTC-USD'
 period = 5  # Predicting for the next 5 days
+
+# Streamlit UI
+st.title("Cryptocurrency Price Prediction (Next 5 Days)")
+
+# Dropdown for selecting cryptocurrency
+crypto_options = {
+    'Bitcoin (BTC)': 'BTC-USD',
+    'Ethereum (ETH)': 'ETH-USD',
+    'Litecoin (LTC)': 'LTC-USD',
+    'Dogecoin (DOGE)': 'DOGE-USD'
+}
+selected_crypto = st.selectbox('Select Cryptocurrency', list(crypto_options.keys()))
+selected_ticker = crypto_options[selected_crypto]
 
 # Function to load stock/crypto data from Yahoo Finance
 def load_data(ticker):
@@ -36,7 +48,7 @@ def load_data(ticker):
     return data
 
 # Load the data
-data = load_data(selected_stock)
+data = load_data(selected_ticker)
 
 # Prepare the data for predictions
 df_train = data[['Date', 'Close']].rename(columns={"Date": "ds", "Close": "y"})
@@ -57,11 +69,8 @@ df_train = df_train.dropna()
 # Ensure feature order matches the training data
 features_order = ['SMA_10', 'SMA_30', 'EMA_10', 'EMA_30', 'day', 'month', 'year']
 
-# Streamlit UI
-st.title("Bitcoin Price Prediction (Next 5 Days)")
-
 # Show raw data (last 5 rows)
-st.subheader("Raw Data")
+st.subheader(f"Raw Data for {selected_crypto}")
 st.write(data.tail())
 
 # Prepare future features for prediction
@@ -95,5 +104,5 @@ future_df = pd.DataFrame({'Date': future_dates, 'Predicted Close': future_close}
 future_df.set_index('Date', inplace=True)
 
 # Display the forecast data
-st.subheader(f"Predicted Bitcoin Prices for the Next {period} Days")
+st.subheader(f"Predicted Prices for {selected_crypto} for the Next {period} Days")
 st.write(future_df)
