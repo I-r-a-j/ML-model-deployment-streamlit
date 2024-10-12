@@ -14,10 +14,10 @@ def load_model(url):
     response = requests.get(url)
     with open("bitcoin_rf_model_with_moving_avg.pkl", "wb") as file:
         file.write(response.content)
-
+    
     with open("bitcoin_rf_model_with_moving_avg.pkl", "rb") as file:
         model = pickle.load(file)
-
+    
     return model
 
 # Load the pre-trained model
@@ -97,3 +97,7 @@ future_df.set_index('Date', inplace=True)
 # Display the forecast data
 st.subheader(f"Predicted Bitcoin Prices for the Next {period} Days")
 st.write(future_df)
+
+# Plot the predictions
+st.subheader("Prediction Plot")
+st.line_chart(future_df['Predicted Close'])
