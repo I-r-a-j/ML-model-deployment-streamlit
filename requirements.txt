@@ -1,6 +1,7 @@
 streamlit
 pandas
 yfinance
-joblib
+pickle
 plotly
 scikit-learn
+numpy
