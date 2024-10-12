@@ -16,45 +16,27 @@ MODEL_URL = "https://drive.google.com/uc?export=download&id=1s7oixIxTfi72ctvnZig
 
 # Set the title of the Streamlit app
 st.title('Stock Forecast App')
+
 # Function to download the model
 @st.cache_resource  # Caches the model to avoid re-downloading
 def download_model(url):
     response = requests.get(url)
     with open("model.pkl", "wb") as file:
         file.write(response.content)
-
-# Available stocks for selection
-stocks = ('GOOG', 'AAPL', 'MSFT', 'GME')
-selected_stock = st.selectbox('Select dataset for prediction', stocks)
     with open("model.pkl", "rb") as file:
         model = pickle.load(file)
-
-# Fixed prediction period of 5 days
-period = 5
     return model
 
 # Function to load stock data from Yahoo Finance
-@st.cache
+@st.cache_data
 def load_data(ticker):
     data = yf.download(ticker, START, TODAY)
     data.reset_index(inplace=True)
     return data
-# Load the model
-model = download_model(MODEL_URL)
 
-# Load and display stock data
-data_load_state = st.text('Loading data...')
-data = load_data(selected_stock)
-data_load_state.text('Loading data... done!')
 # Function to make predictions (adjust according to your model's input/output)
 def predict(data):
     return model.predict(data)
-
-# Display raw data
-st.subheader('Raw data')
-st.write(data.tail())
-# Streamlit UI
-st.title("Model Prediction App")
 
 # Plot raw data using Plotly
 def plot_raw_data():
@@ -63,24 +45,46 @@ def plot_raw_data():
     fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], name="stock_close"))
     fig.layout.update(title_text='Time Series data with Rangeslider', xaxis_rangeslider_visible=True)
     st.plotly_chart(fig)
-# Input data for prediction (this is just an example; adjust as per your model)
-input_data = st.text_area("Enter data for prediction (e.g., CSV format)")
+
+# Available stocks for selection
+stocks = ('GOOG', 'AAPL', 'MSFT', 'GME')
+selected_stock = st.selectbox('Select dataset for prediction', stocks)
+
+# Fixed prediction period of 5 days
+period = 5
+
+# Load the model
+model = download_model(MODEL_URL)
+
+# Load and display stock data
+data_load_state = st.text('Loading data...')
+data = load_data(selected_stock)
+data_load_state.text('Loading data... done!')
+
+# Display raw data
+st.subheader('Raw data')
+st.write(data.tail())
 
 plot_raw_data()
+
 # Prepare data for forecasting (using 'Date' and 'Close' columns)
 df_train = data[['Date', 'Close']]
 df_train = df_train.rename(columns={"Date": "ds", "Close": "y"})
+
 # Train a simple linear regression model for forecasting
 model = LinearRegression()
 model.fit(df_train.index.values.reshape(-1, 1), df_train['y'])
+
 # Create future dataset for predictions (5 days ahead)
 last_index = df_train.index[-1]
 future_dates = pd.date_range(df_train['ds'].iloc[-1], periods=period + 1, freq='D').tolist()
 future_close = [df_train['y'].iloc[-1]]  # Start with the last known close price
+
 # Recursive prediction loop for future prices (5 days ahead)
 for i in range(1, len(future_dates)):
     next_close = model.predict([[last_index + i]])  # Predict next day's close based on linear regression
     future_close.append(next_close[0])
+
 # Ensure future_dates and future_close have the same length before creating a DataFrame
 if len(future_dates) == len(future_close):
     future_df = pd.DataFrame({'Date': future_dates, 'Predicted Close': future_close})
@@ -96,6 +100,10 @@ if len(future_dates) == len(future_close):
     st.plotly_chart(fig1)
 else:
     st.error("Error: Future dates and predicted close values have mismatched lengths.")
+
+# Input data for prediction (this is just an example; adjust as per your model)
+input_data = st.text_area("Enter data for prediction (e.g., CSV format)")
+
 if input_data:
     try:
         # Convert input data into a format usable by your model
