@@ -2,7 +2,7 @@ import requests
 import pickle
 import streamlit as st
 import pandas as pd
-from datetime import date
+from datetime import date, timedelta
 from pycoingecko import CoinGeckoAPI  # Import CoinGeckoAPI for cryptocurrency data
 
 # Initialize CoinGecko API client
@@ -29,7 +29,7 @@ def load_model(url):
     return model
 
 # Constants
-START = "2015-01-01"
+START = (date.today() - timedelta(days=365)).strftime("%Y-%m-%d")  # Restrict to past year
 TODAY = date.today().strftime("%Y-%m-%d")
 period = 5  # Predicting for the next 5 days
 
@@ -50,9 +50,9 @@ selected_coin = crypto_options[selected_crypto]
 MODEL_URL = MODEL_URLS[selected_crypto]
 model = load_model(MODEL_URL)
 
-# Function to load cryptocurrency data from CoinGecko
+# Function to load cryptocurrency data from CoinGecko (past 365 days)
 def load_data(coin):
-    market_data = cg.get_coin_market_chart_by_id(id=coin, vs_currency='usd', days='max')
+    market_data = cg.get_coin_market_chart_by_id(id=coin, vs_currency='usd', days=365)
     prices = market_data['prices']
     
     # Convert to DataFrame
