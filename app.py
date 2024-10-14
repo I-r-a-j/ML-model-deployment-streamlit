@@ -84,9 +84,9 @@ df_train = df_train.dropna()
 # Ensure feature order matches the training data
 features_order = ['SMA_10', 'SMA_30', 'EMA_10', 'EMA_30', 'day', 'month', 'year']
 
-# Show raw data (remove the latest row)
-st.subheader(f"Raw Data for {selected_crypto} (Last 364 Days Excluding the Latest)")
-st.write(data.iloc[:-1])  # Display all rows except the last one
+# Show raw data (only the last 10 rows)
+st.subheader(f"Raw Data for {selected_crypto} (Last 10 Rows)")
+st.write(data.tail(10))  # Display only the last 10 rows
 
 # Prepare future features for prediction
 today = pd.Timestamp(TODAY)
