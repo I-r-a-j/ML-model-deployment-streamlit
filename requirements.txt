@@ -1,7 +1,7 @@
 requests
 streamlit
 pandas
-yfinance
+pycoingecko
 plotly
 numpy
 scikit-learn
