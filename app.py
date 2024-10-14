@@ -5,23 +5,25 @@ import pandas as pd
 from datetime import date
 import yfinance as yf  # Import yfinance for downloading stock/crypto data
 
-# Google Drive link for the model
-MODEL_URL = "https://drive.google.com/uc?export=download&id=1s7oixIxTfi72ctvnZigUj64XYKAGLqou"
+# Google Drive links for the models
+MODEL_URLS = {
+    'Bitcoin (BTC)': "https://drive.google.com/uc?export=download&id=1-55iPtncWPsMzxDOHOsLNbv0snuQUTcJ",
+    'Ethereum (ETH)': "https://drive.google.com/uc?export=download&id=1-7QoFQThAweJnxmixjKSazFQXyN0FAU_",
+    'Litecoin (LTC)': "https://drive.google.com/uc?export=download&id=1-Ajon8ebaYzuI-TDLj14UziC0meqVTc-",
+    'Dogecoin (DOGE)': "https://drive.google.com/uc?export=download&id=1-RC4K3aC7eqtrifKOZicRgE6RLJpsk7G"
+}
 
 # Function to download the model from Google Drive
 @st.cache_resource  # Cache the model to avoid re-downloading
 def load_model(url):
     response = requests.get(url)
-    with open("bitcoin_rf_model_with_moving_avg.pkl", "wb") as file:
+    with open("crypto_model.pkl", "wb") as file:
         file.write(response.content)
     
-    with open("bitcoin_rf_model_with_moving_avg.pkl", "rb") as file:
+    with open("crypto_model.pkl", "rb") as file:
         model = pickle.load(file)
     
     return model
-
-# Load the pre-trained model
-model = load_model(MODEL_URL)
 
 # Constants
 START = "2015-01-01"
@@ -40,6 +42,10 @@ crypto_options = {
 }
 selected_crypto = st.selectbox('Select Cryptocurrency', list(crypto_options.keys()))
 selected_ticker = crypto_options[selected_crypto]
+
+# Load the model corresponding to the selected cryptocurrency
+MODEL_URL = MODEL_URLS[selected_crypto]
+model = load_model(MODEL_URL)
 
 # Function to load stock/crypto data from Yahoo Finance
 def load_data(ticker):
