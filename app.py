@@ -86,7 +86,7 @@ features_order = ['SMA_10', 'SMA_30', 'EMA_10', 'EMA_30', 'day', 'month', 'year'
 
 # Show raw data (last 5 rows)
 st.subheader(f"Raw Data for {selected_crypto}")
-st.write(data.tail())
+st.write(data.tail(364))
 
 # Prepare future features for prediction
 today = pd.Timestamp(TODAY)
