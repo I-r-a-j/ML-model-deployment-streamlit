@@ -3,7 +3,10 @@ import pickle
 import streamlit as st
 import pandas as pd
 from datetime import date
-import yfinance as yf  # Import yfinance for downloading stock/crypto data
+from pycoingecko import CoinGeckoAPI  # Import CoinGeckoAPI for cryptocurrency data
+
+# Initialize CoinGecko API client
+cg = CoinGeckoAPI()
 
 # Google Drive links for the models
 MODEL_URLS = {
@@ -35,26 +38,32 @@ st.title("Cryptocurrency Price Prediction (Next 5 Days)")
 
 # Dropdown for selecting cryptocurrency
 crypto_options = {
-    'Bitcoin (BTC)': 'BTC-USD',
-    'Ethereum (ETH)': 'ETH-USD',
-    'Litecoin (LTC)': 'LTC-USD',
-    'Dogecoin (DOGE)': 'DOGE-USD'
+    'Bitcoin (BTC)': 'bitcoin',
+    'Ethereum (ETH)': 'ethereum',
+    'Litecoin (LTC)': 'litecoin',
+    'Dogecoin (DOGE)': 'dogecoin'
 }
 selected_crypto = st.selectbox('Select Cryptocurrency', list(crypto_options.keys()))
-selected_ticker = crypto_options[selected_crypto]
+selected_coin = crypto_options[selected_crypto]
 
 # Load the model corresponding to the selected cryptocurrency
 MODEL_URL = MODEL_URLS[selected_crypto]
 model = load_model(MODEL_URL)
 
-# Function to load stock/crypto data from Yahoo Finance
-def load_data(ticker):
-    data = yf.download(ticker, START, TODAY)
-    data.reset_index(inplace=True)
+# Function to load cryptocurrency data from CoinGecko
+def load_data(coin):
+    market_data = cg.get_coin_market_chart_by_id(id=coin, vs_currency='usd', days='max')
+    prices = market_data['prices']
+    
+    # Convert to DataFrame
+    data = pd.DataFrame(prices, columns=['timestamp', 'Close'])
+    data['Date'] = pd.to_datetime(data['timestamp'], unit='ms')  # Convert from timestamp to date
+    data = data[['Date', 'Close']]
+    
     return data
 
 # Load the data
-data = load_data(selected_ticker)
+data = load_data(selected_coin)
 
 # Prepare the data for predictions
 df_train = data[['Date', 'Close']].rename(columns={"Date": "ds", "Close": "y"})
