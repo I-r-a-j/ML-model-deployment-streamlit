@@ -85,7 +85,7 @@ df_train = df_train.dropna()
 features_order = ['SMA_10', 'SMA_30', 'EMA_10', 'EMA_30', 'day', 'month', 'year']
 
 # Show raw data (only the last 10 rows, excluding the last row)
-st.subheader(f"Raw Data for {selected_crypto} (Last 10 Rows, Excluding Latest)")
+st.subheader(f"Raw Data for {selected_crypto}")
 st.write(data.iloc[:-1].tail(10))  # Exclude the last row and show the last 10 remaining rows
 
 # Prepare future features for prediction
